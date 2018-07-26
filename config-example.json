@@ -16,7 +16,11 @@
 
 	"first_submit" : "sell",
 
+	"target_price" : "b1",
+
 	"batch_size" : 10,
+
+	"ignore_amount" : 0,
 
 	"telegram_notify" : false,
 

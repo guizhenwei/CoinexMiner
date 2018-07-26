@@ -68,7 +68,7 @@ stop_threshold = 0.9
 挖矿停止阈值 因为读取的coinex难度api 已挖cet有一定延迟 可以调小这个值来抵御 默认0.9 已挖cet达到难度的90%就停止
 
 
-first_submit =  "sell"
+first_submit = "sell"
 
 优先提交卖单还是买单  sell就是 先提交卖 buy就是先提交买
 
@@ -78,10 +78,19 @@ first_submit =  "sell"
 
 横盘的时候 随意选择一个
 
+target_price = "b1"
+
+目标价格 b1就是锚定买一价格 s1就是锚定卖一价格
+
 batch_size = 10
 
 一个批次内挖矿次数 默认是10次 如果你没单的金额特别大 可以减小该数值 最小值1
 
+ignore_amount = 0
+
+有些时候会遇到盘口 小额挂单干扰挖矿 就可以开启这个参数 默认0 不开启
+
+比如在CDYBCH交易对中 设置这个值为10 意味着 只要盘口买一卖一的数量小于10个 就会忽略该小额单继续挖矿
 
 telegram_notify : false
 

@@ -38,3 +38,7 @@ telegram_chatid = data['telegram_chatid']
 telegram_token = data['telegram_token']
 
 telegram_rmsc = data['telegram_rmsc']
+
+ignore_amount = data['ignore_amount']
+
+target_price = data['target_price']
