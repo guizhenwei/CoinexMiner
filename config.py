@@ -44,3 +44,9 @@ ignore_amount = data['ignore_amount']
 target_price = data['target_price']
 
 sample_size = data['sample_size']
+
+skip_ratio = data['skip_ratio']
+
+cet_as_fee = data['cet_as_fee']
+
+

@@ -90,19 +90,24 @@ def check_order_state(_type,data):
 
 	index = 0
 
+	fee_scale = 1.0
+
+	if config.cet_as_fee:
+		fee_scale = 0.5
+
 	while True:
 		if left_amout == 0 or left_amout <= config.ignore_amount:
 			if _type == 'sell':
-				records['money_fees'] = records['money_fees'] + float(data['deal_fee'])
+				records['money_fees'] = records['money_fees'] + float(data['price'])*float(data['amount'])*0.001*fee_scale
 			else:
-				records['goods_fees'] = records['goods_fees'] + float(data['deal_fee'])
+				records['goods_fees'] = records['goods_fees'] + float(data['amount'])*0.001*fee_scale
 
 			total_money = tmp_data['tprice_goods_money'] * records['goods_fees']
 			total_money = total_money + records['money_fees']
 
 			records['predict_cet'] = total_money / tmp_data['tprice_cet_money']
 
-			logging.info('mined %0.2f cet; %0.4f m costed; %0.4f g costed' % (records['predict_cet'],records['money_fees'],records['goods_fees']))
+			logging.info('mined %0.2f cet; %0.8f m costed; %0.8f g costed' % (records['predict_cet'],records['money_fees'],records['goods_fees']))
 			
 
 			pickle.dump(records,open('cache.data','wb'))
@@ -123,9 +128,9 @@ def check_order_state(_type,data):
 		elapsed_time = time.time() - start_time
 		if elapsed_time > 60*config.wait_order:
 			if _type == 'sell':
-				records['money_fees'] = records['money_fees'] + float(data['deal_fee'])
+				records['money_fees'] = records['money_fees'] + float(data['price'])*float(data['amount'])*0.001*fee_scale
 			else:
-				records['goods_fees'] = records['goods_fees'] + float(data['deal_fee'])
+				records['goods_fees'] = records['goods_fees'] + float(data['amount'])*0.001*fee_scale
 			return 'timeout'
 
 		if index < 3:
@@ -143,6 +148,7 @@ def digging():
 		data = data['data']
 		sell_price = float(data['ticker']['sell'])
 		buy_price = float(data['ticker']['buy'])
+		last_price = float(data['ticker']['last']) 
 
 		#todo for every trading pair it should be have different value
 		minimal_price_pulse = 0.00000001
@@ -175,6 +181,13 @@ def digging():
 				price = buy_price + minimal_price_pulse
 			else:
 				price = sell_price - minimal_price_pulse
+
+
+			if abs(1 - price / last_price) * 100 > config.skip_ratio :
+				logging.info('order price exceed skip_ratio.')
+				time.sleep(1)
+				return 'exceed'
+
 
 			if config.first_submit == 'sell':
 				
@@ -265,33 +278,10 @@ def update_balance():
 	logging.info('cet_available: %0.3f' % records['cet_available'])
 	logging.info('money_available: %0.3f' % records['money_available'])
 
-def balance_cost():
-	if records['money_fees'] < 0.0001 or records['goods_fees'] < 0.0001 :
-		logging.info('no need to balance the cost')
+def record_mined_cet():
+	if records['predict_cet'] == 0:
 		return
 
-	goods_markets = config.market
-	logging.info('need buy %s: %0.3f' % (config.goods,records['goods_fees']))
-	data = _private_api.get_ticker(goods_markets)
-	data = data['data']
-	price = float(data['ticker']['sell'])
-	amount = records['goods_fees']
-	logging.info('buy %0.3f at %f %s' % (amount,price,goods_markets))
-	_private_api.buy(amount,price,goods_markets)
-	records['goods_fees'] = 0
-
-	_money_cast_buy_goods = amount * price
-
-	money_markets = 'CET' + config.money
-	logging.info('need buy %s: %0.3f' % (config.money,records['money_fees']))
-	data = _private_api.get_ticker(money_markets)
-	data = data['data']
-	price = float(data['ticker']['buy'])
-	amount = (records['money_fees'] + _money_cast_buy_goods) / price
-	logging.info('sell %0.3f at %f %s' % (amount,price,money_markets))
-	_private_api.sell(amount,price,money_markets)
-	records['money_fees'] = 0
-	
 	cur_hour = time.strftime("%Y-%m-%d %H", time.localtime())
 
 	item = '%s mined %0.3f CET\r\n' % (cur_hour,records['predict_cet'])
@@ -304,6 +294,38 @@ def balance_cost():
 	    f.write(item)
 
 	records['predict_cet'] = 0
+
+def balance_cost():
+	if records['money_fees'] < 0.0001 or records['goods_fees'] < 0.0001 :
+		logging.info('no need to balance the cost')
+		record_mined_cet()
+		return
+
+	goods_markets = config.market
+	logging.info('need buy %s: %0.3f' % (config.goods,records['goods_fees']))
+	data = _private_api.get_ticker(goods_markets)
+	data = data['data']
+	price = float(data['ticker']['sell'])
+	amount = records['goods_fees']
+	logging.info('buy %0.3f at %f %s' % (amount,price,goods_markets))
+	if not config.cet_as_fee:
+		_private_api.buy(amount,price,goods_markets)
+	records['goods_fees'] = 0
+
+	_money_cast_buy_goods = amount * price
+
+	money_markets = 'CET' + config.money
+	logging.info('need buy %s: %0.3f' % (config.money,records['money_fees']))
+	data = _private_api.get_ticker(money_markets)
+	data = data['data']
+	price = float(data['ticker']['buy'])
+	amount = (records['money_fees'] + _money_cast_buy_goods) / price
+	logging.info('sell %0.3f at %f %s' % (amount,price,money_markets))
+	if not config.cet_as_fee:
+		_private_api.sell(amount,price,money_markets)
+	records['money_fees'] = 0
+	
+	record_mined_cet()
 
 
 init_logger()

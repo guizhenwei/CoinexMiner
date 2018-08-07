@@ -57,6 +57,9 @@ wave_ratio = 1
 
 最近成交波动方差 1就是 最近成交价格浮动 小于1% 减小该值可以减少被套风险 但是挖矿速度会下降
 
+skip_ratio = 0.5
+
+单位 百分比 默认千5 机器人挂单价与最后成交价差超过该比例 就忽略该次挂单
 
 wait_order = 10
 
@@ -95,6 +98,10 @@ ignore_amount = 0
 sample_size = 500
 
 波动方差采样数量 默认500 觉得波动率检测不够敏感的可以 适当调小
+
+cet_as_fee = false
+
+是否开启cet抵扣手续费 默认关闭 建议开启 这样可以减少cet抛盘 (注意！开启此功能需手动配合打开coinex面板使用cet抵扣手续费)
 
 telegram_notify : false
 
