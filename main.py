@@ -39,19 +39,19 @@ def get_self_cet_prediction():
 	tmp_data['tprice_goods_money'] = float(data['ticker']['sell'])
 
 def init_logger():
-    logging.VERBOSE = 15
-    logging.verbose = lambda x: logging.log(logging.VERBOSE, x)
-    logging.addLevelName(logging.VERBOSE, "VERBOSE")
+	logging.VERBOSE = 15
+	logging.verbose = lambda x: logging.log(logging.VERBOSE, x)
+	logging.addLevelName(logging.VERBOSE, "VERBOSE")
 
-    level = logging.INFO
- 
-    logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',
-                        level=level)
+	level = logging.INFO
 
-    fh = logging.FileHandler('./log.txt')
-    formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
-    fh.setFormatter(formatter)
-    logging.getLogger('').addHandler(fh)
+	logging.basicConfig(format='%(asctime)s [%(levelname)s] %(message)s',
+											level=level)
+
+	fh = logging.FileHandler('./log.txt')
+	formatter = logging.Formatter('%(asctime)s [%(levelname)s] %(message)s')
+	fh.setFormatter(formatter)
+	logging.getLogger('').addHandler(fh)
 
 
 def calculate_variance(_private_api):
@@ -95,12 +95,13 @@ def check_order_state(_type,data):
 	if config.cet_as_fee:
 		fee_scale = 0.5
 
+	
 	while True:
 		if left_amout == 0 or left_amout <= config.ignore_amount:
 			if _type == 'sell':
-				records['money_fees'] = records['money_fees'] + float(data['price'])*float(data['amount'])*0.001*fee_scale
+				records['money_fees'] = records['money_fees'] + float(data['price'])*float(data['amount'])*float(data['maker_fee_rate'])*fee_scale
 			else:
-				records['goods_fees'] = records['goods_fees'] + float(data['amount'])*0.001*fee_scale
+				records['goods_fees'] = records['goods_fees'] + float(data['amount'])*float(data['taker_fee_rate'])*fee_scale
 
 			total_money = tmp_data['tprice_goods_money'] * records['goods_fees']
 			total_money = total_money + records['money_fees']
@@ -128,9 +129,9 @@ def check_order_state(_type,data):
 		elapsed_time = time.time() - start_time
 		if elapsed_time > 60*config.wait_order:
 			if _type == 'sell':
-				records['money_fees'] = records['money_fees'] + float(data['price'])*float(data['amount'])*0.001*fee_scale
+				records['money_fees'] = records['money_fees'] + float(data['price'])*float(data['amount'])*float(data['maker_fee_rate'])*fee_scale
 			else:
-				records['goods_fees'] = records['goods_fees'] + float(data['amount'])*0.001*fee_scale
+				records['goods_fees'] = records['goods_fees'] + float(data['amount'])*float(data['taker_fee_rate'])*fee_scale
 			return 'timeout'
 
 		if index < 3:
@@ -278,20 +279,18 @@ def update_balance():
 	logging.info('cet_available: %0.3f' % records['cet_available'])
 	logging.info('money_available: %0.3f' % records['money_available'])
 
+
 def record_mined_cet():
 	if records['predict_cet'] == 0:
 		return
 
 	cur_hour = time.strftime("%Y-%m-%d %H", time.localtime())
 
-	item = '%s mined %0.3f CET\r\n' % (cur_hour,records['predict_cet'])
-	logging.info(item)
-
-	if config.telegram_notify:
-		send_message(item)
+	item = '%s mined %0.3f CET\r\n' % (cur_hour,float(records['predict_cet']))
+	logging.info(send_message(item))
 		
 	with open('records.txt', 'a+') as f:
-	    f.write(item)
+			 f.write(item)
 
 	records['predict_cet'] = 0
 
@@ -334,9 +333,7 @@ def main():
 	global records
 	
 	welcome = 'CoinexMiner Started!'
-	logging.info(welcome)
-	if config.telegram_notify:
-		send_message(welcome)
+	logging.info(send_message(welcome))
 
 	try:
 		records = pickle.load(open('cache.data','rb'))
@@ -420,8 +417,7 @@ if __name__ == "__main__":
 			main()
 		except Exception as e:
 			logging.error(str(e))
-			if config.telegram_notify:
-				send_message('CoinexMiner: ' + str(e) + ', restarting in 1 min')
+			send_message('CoinexMiner: ' + str(e) + ', restarting in 1 min')
 			time.sleep(60)
 
 	
